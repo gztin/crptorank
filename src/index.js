@@ -94,7 +94,8 @@ async function loopRankPush() {
   const nextSnapshot = {};
   const lines = [];
 
-  climbers.slice(0, 10).forEach((row, idx) => {
+  const displayRows = [];
+  climbers.forEach((row) => {
     const sym = row.t.base;
     const prevRank = Number(prevSnapshot[sym]?.rank || 0);
     const prevPushPrice = Number(prevSnapshot[sym]?.price || 0);
@@ -103,14 +104,15 @@ async function loopRankPush() {
     const rankMoveText = prevRank
       ? (rankMove === 0 ? '不變' : (rankMove > 0 ? `上升 ${rankMove}` : `下降 ${Math.abs(rankMove)}`))
       : '不變';
+    if (rankMove > 0 && row.rank <= 30) {
+      displayRows.push({
+        sym,
+        rank: row.rank,
+        rankMoveText,
+        change5m: Number(row.t.change5m || 0)
+      });
+    }
     const price = Number(row.t.price || 0);
-    const priceChangeFromPrevPush = prevPushPrice > 0
-      ? ((price - prevPushPrice) / prevPushPrice) * 100
-      : 0;
-
-    lines.push(
-      `${idx + 1}. ${sym}  距上次價格${formatSignedPct(priceChangeFromPrevPush)}  #${row.rank}（${rankMoveText}）`
-    );
 
     nextSnapshot[sym] = {
       rank: row.rank,
@@ -120,6 +122,14 @@ async function loopRankPush() {
       ts: now
     };
   });
+  if (displayRows.length === 0) return;
+
+  displayRows
+    .sort((a, b) => a.rank - b.rank)
+    .slice(0, 10)
+    .forEach((row, idx) => {
+      lines.push(`${idx + 1}. ${row.sym}  5m${formatSignedPct(row.change5m)}  #${row.rank}（${row.rankMoveText}）`);
+    });
 
   const potentialRows = climbers
     .filter(row => Number(row.volumeChangePct || 0) > 2)

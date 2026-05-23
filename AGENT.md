@@ -60,6 +60,10 @@ npm run start
   - `上升 N`
   - `下降 N`
   - `不變`
+- Display filter:
+  - only include symbols with rank move `上升` (`prevRank - currentRank > 0`)
+  - only include symbols with `CURRENT_RANK <= 30`
+  - if no symbols match, skip this push cycle
 - OI information is removed from push lines.
 
 3. Potential candidates section
