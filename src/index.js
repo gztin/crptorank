@@ -71,11 +71,11 @@ async function loopRankPush() {
   climbers.slice(0, 10).forEach((row, idx) => {
     const sym = row.t.base;
     const prevRank = Number(prevSnapshot[sym]?.rank || 0);
-    const rankText = prevRank
-      ? (prevRank === row.rank ? `(維持 #${row.rank})` : (row.rank < prevRank ? `(↑ 由 #${prevRank})` : `(↓ 由 #${prevRank})`))
-      : '(新進榜)';
+    const rankMoveText = prevRank
+      ? (prevRank === row.rank ? '0' : (prevRank - row.rank > 0 ? `+${prevRank - row.rank}` : `${prevRank - row.rank}`))
+      : 'NEW';
     const chasingRisk = row.t.change > 3 ? ' ⚠️ 追價風險' : '';
-    lines.push(`${idx + 1}. ${sym}  ${Number(row.t.price || 0).toFixed(6)}  ${(row.t.change >= 0 ? '+' : '')}${Number(row.t.change || 0).toFixed(2)}%  #${row.rank} ${rankText}${chasingRisk}`);
+    lines.push(`${idx + 1}. ${sym}  ${Number(row.t.price || 0).toFixed(6)}  ${(row.t.change >= 0 ? '+' : '')}${Number(row.t.change || 0).toFixed(2)}% | BingX名次 #${row.rank} | 名次變化 ${rankMoveText}${chasingRisk}`);
     nextSnapshot[sym] = { rank: row.rank, ts: now };
   });
 
