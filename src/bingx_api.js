@@ -20,6 +20,7 @@ export async function fetchBingxTickers() {
       base: String(r.symbol).replace('-USDT', ''),
       price: Number(r.lastPrice || 0),
       change: Number(r.priceChangePercent || 0),
+      change5m: Number(r.priceChangePercent5m || 0),
       volVelocity: Number(r.volume || 0),
       oiChangePct: Number(r.openInterestChangePercent || 0)
     }));
@@ -34,6 +35,7 @@ export async function fetchKlines(base, interval = '15m', limit = 40) {
     open: Number(r.open || 0),
     high: Number(r.high || 0),
     low: Number(r.low || 0),
-    close: Number(r.close || 0)
+    close: Number(r.close || 0),
+    volume: Number(r.volume || 0)
   }));
 }

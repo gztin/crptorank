@@ -40,6 +40,22 @@ function formatVolume(v) {
   return n.toFixed(2);
 }
 
+function calcVolumeChangePct(candles) {
+  if (!Array.isArray(candles) || candles.length < 21) return 0;
+  const vols = candles.map(c => Number(c.volume || 0));
+  const current = vols[vols.length - 1] || 0;
+  const base = vols.slice(Math.max(0, vols.length - 21), vols.length - 1);
+  const avg = base.length ? base.reduce((s, v) => s + v, 0) / base.length : 0;
+  if (avg <= 0) return 0;
+  return ((current - avg) / avg) * 100;
+}
+
+function classifyPotentialByVolume(changePct) {
+  if (changePct >= 120) return '正在噴發 (預測正確)';
+  if (changePct >= 40) return '蓄勢待發 (可以入場)';
+  return '潛力種子 (等待驗證)';
+}
+
 let lastPushAt = 0;
 
 async function loopRankPush() {
@@ -64,7 +80,8 @@ async function loopRankPush() {
     const candles = await fetchKlines(t.base, '15m', 40).catch(() => []);
     const climb = detectSteadyClimb(candles);
     if (!climb.steady) continue;
-    climbers.push({ t, climb, rank: Number(rankByBase.get(t.base) || 0) });
+    const volumeChangePct = calcVolumeChangePct(candles);
+    climbers.push({ t, climb, rank: Number(rankByBase.get(t.base) || 0), volumeChangePct });
   }
   if (climbers.length === 0) return;
 
@@ -77,10 +94,12 @@ async function loopRankPush() {
     const prevRank = Number(prevSnapshot[sym]?.rank || 0);
     const prevSignalCount = Number(prevSnapshot[sym]?.signalCount || 0);
     const rankMove = prevRank ? (prevRank - row.rank) : 0;
-    const rankMoveText = prevRank ? (rankMove === 0 ? '0' : (rankMove > 0 ? `+${rankMove}` : `${rankMove}`)) : 'NEW';
+    const rankMoveText = prevRank
+      ? (rankMove === 0 ? '不變' : (rankMove > 0 ? `上升 ${rankMove}` : `下降 ${Math.abs(rankMove)}`))
+      : '不變';
 
     lines.push(
-      `${idx + 1}. ${sym}  24h${formatSignedPct(row.t.change)}  #${row.rank} (${rankMoveText})`
+      `${idx + 1}. ${sym}  5m${formatSignedPct(row.t.change5m)}  #${row.rank}（${rankMoveText}）`
     );
 
     nextSnapshot[sym] = {
@@ -92,14 +111,18 @@ async function loopRankPush() {
   });
 
   const potentialRows = climbers
-    .filter(row => Number(row.t.change || 0) > 10)
-    .sort((a, b) => Number(b.t.change || 0) - Number(a.t.change || 0))
+    .filter(row => Number(row.volumeChangePct || 0) > 10)
+    .sort((a, b) => Number(b.volumeChangePct || 0) - Number(a.volumeChangePct || 0))
     .slice(0, 10)
-    .map((row, idx) => {
+    .map((row) => {
       const sym = row.t.base;
       const signalCount = Number(nextSnapshot[sym]?.signalCount || 1);
-      return `${idx + 1}. ${sym}  量能 ${formatVolume(row.t.volVelocity)}  信號次數 ${signalCount}`;
+      const stage = classifyPotentialByVolume(Number(row.volumeChangePct || 0));
+      return { sym, signalCount, stage, volumeChangePct: Number(row.volumeChangePct || 0) };
     });
+
+  const buildupRows = potentialRows.filter(r => r.stage === '蓄勢待發 (可以入場)');
+  const eruptingRows = potentialRows.filter(r => r.stage === '正在噴發 (預測正確)');
 
   const avgR2 = climbers.reduce((s, r) => s + r.climb.r2, 0) / climbers.length;
   const avgSlope = climbers.reduce((s, r) => s + r.climb.slopePct, 0) / climbers.length;
@@ -110,8 +133,11 @@ async function loopRankPush() {
   const msg = `📊 **穩定爬升清單（共 ${climbers.length} 檔）**\n`
     + `————————————\n`
     + `${lines.join('\n')}\n\n`
-    + `🔥 **具備潛力標的（24h 漲幅 > 10%）**\n`
-    + `${potentialRows.length ? potentialRows.join('\n') : '- 無'}\n\n`
+    + `🔥 **具備潛力標的（15m 量能變化 > 10%）**\n\n`
+    + `蓄勢待發：\n`
+    + `${buildupRows.length ? buildupRows.map((r, i) => `${i + 1}. ${r.sym}  量能 ${formatSignedPct(r.volumeChangePct)}  信號次數 ${r.signalCount}`).join('\n') : '- 無'}\n\n`
+    + `正在噴發：\n`
+    + `${eruptingRows.length ? eruptingRows.map((r, i) => `${i + 1}. ${r.sym}  量能 ${formatSignedPct(r.volumeChangePct)}  信號次數 ${r.signalCount}`).join('\n') : '- 無'}\n\n`
     + `📈 **統計**\n`
     + `- 平均 R²：${avgR2.toFixed(2)}\n`
     + `- 平均斜率：${avgSlope.toFixed(3)}% / bar\n`
