@@ -74,9 +74,6 @@ npm run start
   - `蓄勢待發（可以入場）`: `+15% ~ +39%`
   - `正在噴發（預測正確）`: `>= +40%`
 
-4. Statistics and leaders
-- Average R²
-- Average slope (% / bar)
-- Average higher-lows
+4. Leaders only
 - Stability leader (highest R²)
 - Momentum leader (highest slope%)
