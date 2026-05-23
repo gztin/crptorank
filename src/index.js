@@ -38,17 +38,30 @@ async function loopRankPush() {
   if (now - lastPushAt < intervalMs) return;
 
   const topN = Number(process.env.RANK_PUSH_TOP_N || 30);
+  const mainstreamSymbols = String(process.env.MAINSTREAM_SYMBOLS || 'BTC,ETH,SOL,BNB,XRP,DOGE')
+    .split(',')
+    .map(s => s.trim().toUpperCase())
+    .filter(Boolean);
+  const mainstreamSet = new Set(mainstreamSymbols);
+
   const tickers = await fetchBingxTickers();
-  const ranked = tickers.sort((a, b) => (b.volVelocity || 0) - (a.volVelocity || 0)).slice(0, topN);
-  if (ranked.length === 0) return;
+  const sortedTickers = tickers.sort((a, b) => (b.volVelocity || 0) - (a.volVelocity || 0));
+  const rankByBase = new Map(sortedTickers.map((t, idx) => [t.base, idx + 1]));
+
+  const mainstreamTickers = sortedTickers.filter(t => mainstreamSet.has(String(t.base || '').toUpperCase()));
+  const ranked = sortedTickers
+    .filter(t => !mainstreamSet.has(String(t.base || '').toUpperCase()))
+    .slice(0, topN);
+
+  const scanTargets = [...mainstreamTickers, ...ranked];
+  if (scanTargets.length === 0) return;
 
   const climbers = [];
-  for (let i = 0; i < ranked.length; i++) {
-    const t = ranked[i];
+  for (const t of scanTargets) {
     const candles = await fetchKlines(t.base, '15m', 40).catch(() => []);
     const climb = detectSteadyClimb(candles);
     if (!climb.steady) continue;
-    climbers.push({ t, climb, rank: i + 1 });
+    climbers.push({ t, climb, rank: Number(rankByBase.get(t.base) || 0) });
   }
   if (climbers.length === 0) return;
 
