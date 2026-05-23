@@ -43,22 +43,11 @@ async function loopRankPush() {
   if (now - lastPushAt < intervalMs) return;
 
   const topN = Number(process.env.RANK_PUSH_TOP_N || 30);
-  const mainstreamSymbols = String(process.env.MAINSTREAM_SYMBOLS || 'BTC,ETH,SOL,BNB,XRP,DOGE')
-    .split(',')
-    .map(s => s.trim().toUpperCase())
-    .filter(Boolean);
-  const mainstreamSet = new Set(mainstreamSymbols);
-
   const tickers = await fetchBingxTickers();
   const sortedTickers = tickers.sort((a, b) => (b.volVelocity || 0) - (a.volVelocity || 0));
   const rankByBase = new Map(sortedTickers.map((t, idx) => [t.base, idx + 1]));
 
-  const mainstreamTickers = sortedTickers.filter(t => mainstreamSet.has(String(t.base || '').toUpperCase()));
-  const ranked = sortedTickers
-    .filter(t => !mainstreamSet.has(String(t.base || '').toUpperCase()))
-    .slice(0, topN);
-
-  const scanTargets = [...mainstreamTickers, ...ranked];
+  const scanTargets = sortedTickers.slice(0, topN);
   if (scanTargets.length === 0) return;
 
   const climbers = [];

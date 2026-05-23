@@ -46,6 +46,8 @@ npm run start
 ## Ranking Definition
 - `#rank` means the symbol position inside the fetched BingX U-margined perpetual ticker set.
 - Ranking is computed internally by sorting `volume` in descending order.
+- Scan targets are exactly top `RANK_PUSH_TOP_N` symbols from this ranking.
+- Mainstream symbols are not force-included.
 - Rank movement is tracked against previous push snapshot.
 
 ## Push Message Format
