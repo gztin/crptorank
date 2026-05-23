@@ -55,8 +55,7 @@ npm run start
 - `📊 **穩定爬升清單（共 N 檔）**`
 
 2. Ranked lines (top 10 display)
-- `{listIndex}. {SYMBOL}  {PRICE}  {+/-DELTA_FROM_PREV_PUSH%} | U本位名次 #{CURRENT_RANK} ({RANK_MOVE})`
-- `DELTA_FROM_PREV_PUSH%` = current `priceChangePercent` - previous pushed `priceChangePercent`.
+- `{listIndex}. {SYMBOL}  24h{+/-CHANGE%}  #{CURRENT_RANK} ({RANK_MOVE})`
 - `RANK_MOVE` values:
   - `NEW`
   - `0`
@@ -64,7 +63,13 @@ npm run start
   - `-N`
 - OI information is removed from push lines.
 
-3. Statistics and leaders
+3. Potential candidates section
+- Header: `🔥 **具備潛力標的（24h 漲幅 > 10%）**`
+- Display format:
+  - `{listIndex}. {SYMBOL}  量能 {VOLUME}  信號次數 {SIGNAL_COUNT}`
+- `SIGNAL_COUNT` is accumulated per symbol from snapshot history.
+
+4. Statistics and leaders
 - Average R²
 - Average slope (% / bar)
 - Average higher-lows

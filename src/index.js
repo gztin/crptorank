@@ -32,6 +32,14 @@ function formatSignedPct(v, digits = 2) {
   return `${n >= 0 ? '+' : ''}${n.toFixed(digits)}%`;
 }
 
+function formatVolume(v) {
+  const n = Number(v || 0);
+  if (n >= 1_000_000_000) return `${(n / 1_000_000_000).toFixed(2)}B`;
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(2)}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(2)}K`;
+  return n.toFixed(2);
+}
+
 let lastPushAt = 0;
 
 async function loopRankPush() {
@@ -67,21 +75,31 @@ async function loopRankPush() {
   climbers.slice(0, 10).forEach((row, idx) => {
     const sym = row.t.base;
     const prevRank = Number(prevSnapshot[sym]?.rank || 0);
-    const prevPushChange = Number(prevSnapshot[sym]?.change || 0);
+    const prevSignalCount = Number(prevSnapshot[sym]?.signalCount || 0);
     const rankMove = prevRank ? (prevRank - row.rank) : 0;
     const rankMoveText = prevRank ? (rankMove === 0 ? '0' : (rankMove > 0 ? `+${rankMove}` : `${rankMove}`)) : 'NEW';
-    const deltaFromPrevPush = Number(row.t.change || 0) - prevPushChange;
 
     lines.push(
-      `${idx + 1}. ${sym}  ${Number(row.t.price || 0).toFixed(6)}  ${formatSignedPct(deltaFromPrevPush)} | U本位名次 #${row.rank} (${rankMoveText})`
+      `${idx + 1}. ${sym}  24h${formatSignedPct(row.t.change)}  #${row.rank} (${rankMoveText})`
     );
 
     nextSnapshot[sym] = {
       rank: row.rank,
       change: Number(row.t.change || 0),
+      signalCount: prevSignalCount + 1,
       ts: now
     };
   });
+
+  const potentialRows = climbers
+    .filter(row => Number(row.t.change || 0) > 10)
+    .sort((a, b) => Number(b.t.change || 0) - Number(a.t.change || 0))
+    .slice(0, 10)
+    .map((row, idx) => {
+      const sym = row.t.base;
+      const signalCount = Number(nextSnapshot[sym]?.signalCount || 1);
+      return `${idx + 1}. ${sym}  量能 ${formatVolume(row.t.volVelocity)}  信號次數 ${signalCount}`;
+    });
 
   const avgR2 = climbers.reduce((s, r) => s + r.climb.r2, 0) / climbers.length;
   const avgSlope = climbers.reduce((s, r) => s + r.climb.slopePct, 0) / climbers.length;
@@ -92,6 +110,8 @@ async function loopRankPush() {
   const msg = `📊 **穩定爬升清單（共 ${climbers.length} 檔）**\n`
     + `————————————\n`
     + `${lines.join('\n')}\n\n`
+    + `🔥 **具備潛力標的（24h 漲幅 > 10%）**\n`
+    + `${potentialRows.length ? potentialRows.join('\n') : '- 無'}\n\n`
     + `📈 **統計**\n`
     + `- 平均 R²：${avgR2.toFixed(2)}\n`
     + `- 平均斜率：${avgSlope.toFixed(3)}% / bar\n`
