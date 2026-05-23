@@ -123,6 +123,17 @@ async function loopRankPush() {
 
   const buildupRows = potentialRows.filter(r => r.stage === '蓄勢待發 (可以入場)');
   const eruptingRows = potentialRows.filter(r => r.stage === '正在噴發 (預測正確)');
+  const potentialSections = [];
+  if (buildupRows.length) {
+    potentialSections.push(
+      `蓄勢待發：\n${buildupRows.map((r, i) => `${i + 1}. ${r.sym}  量能 ${formatSignedPct(r.volumeChangePct)}  信號次數 ${r.signalCount}`).join('\n')}`
+    );
+  }
+  if (eruptingRows.length) {
+    potentialSections.push(
+      `正在噴發：\n${eruptingRows.map((r, i) => `${i + 1}. ${r.sym}  量能 ${formatSignedPct(r.volumeChangePct)}  信號次數 ${r.signalCount}`).join('\n')}`
+    );
+  }
 
   const avgR2 = climbers.reduce((s, r) => s + r.climb.r2, 0) / climbers.length;
   const avgSlope = climbers.reduce((s, r) => s + r.climb.slopePct, 0) / climbers.length;
@@ -133,11 +144,7 @@ async function loopRankPush() {
   const msg = `📊 **穩定爬升清單（共 ${climbers.length} 檔）**\n`
     + `————————————\n`
     + `${lines.join('\n')}\n\n`
-    + `🔥 **具備潛力標的（15m 量能變化 > 10%）**\n\n`
-    + `蓄勢待發：\n`
-    + `${buildupRows.length ? buildupRows.map((r, i) => `${i + 1}. ${r.sym}  量能 ${formatSignedPct(r.volumeChangePct)}  信號次數 ${r.signalCount}`).join('\n') : '- 無'}\n\n`
-    + `正在噴發：\n`
-    + `${eruptingRows.length ? eruptingRows.map((r, i) => `${i + 1}. ${r.sym}  量能 ${formatSignedPct(r.volumeChangePct)}  信號次數 ${r.signalCount}`).join('\n') : '- 無'}\n\n`
+    + `${potentialSections.length ? `🔥 **具備潛力標的（15m 量能變化 > 10%）**\n\n${potentialSections.join('\n\n')}\n\n` : ''}`
     + `📈 **統計**\n`
     + `- 平均 R²：${avgR2.toFixed(2)}\n`
     + `- 平均斜率：${avgSlope.toFixed(3)}% / bar\n`
