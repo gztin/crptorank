@@ -56,6 +56,7 @@ npm run start
 
 2. Ranked lines (top 10 display)
 - `{listIndex}. {SYMBOL}  5m{+/-CHANGE%}  #{CURRENT_RANK}（{RANK_MOVE_TEXT}）`
+- `5m CHANGE%` is computed from latest two 5m kline closes, not ticker shortcut fields.
 - `RANK_MOVE` values:
   - `上升 N`
   - `下降 N`

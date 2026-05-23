@@ -61,6 +61,14 @@ function getSignalCount(snapshot, row) {
   return Number(snapshot?.[sym]?.signalCount || 1);
 }
 
+function calcPriceChangePct(candles) {
+  if (!Array.isArray(candles) || candles.length < 2) return 0;
+  const prev = Number(candles[candles.length - 2]?.close || 0);
+  const curr = Number(candles[candles.length - 1]?.close || 0);
+  if (prev <= 0) return 0;
+  return ((curr - prev) / prev) * 100;
+}
+
 let lastPushAt = 0;
 
 async function loopRankPush() {
@@ -83,10 +91,12 @@ async function loopRankPush() {
   const climbers = [];
   for (const t of scanTargets) {
     const candles = await fetchKlines(t.base, '15m', 40).catch(() => []);
+    const candles5m = await fetchKlines(t.base, '5m', 2).catch(() => []);
     const climb = detectSteadyClimb(candles);
     if (!climb.steady) continue;
     const volumeChangePct = calcVolumeChangePct(candles);
-    climbers.push({ t, climb, rank: Number(rankByBase.get(t.base) || 0), volumeChangePct });
+    const change5m = calcPriceChangePct(candles5m);
+    climbers.push({ t, climb, rank: Number(rankByBase.get(t.base) || 0), volumeChangePct, change5m });
   }
   if (climbers.length === 0) return;
 
@@ -109,7 +119,7 @@ async function loopRankPush() {
         sym,
         rank: row.rank,
         rankMoveText,
-        change5m: Number(row.t.change5m || 0)
+        change5m: Number(row.change5m || 0)
       });
     }
     const price = Number(row.t.price || 0);
