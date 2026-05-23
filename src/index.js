@@ -6,6 +6,7 @@ import { sendTelegramMessage, sendDiscordMessage } from './notifier.js';
 
 const DATA_DIR = process.env.DATA_DIR || path.join(process.cwd(), 'data');
 const SNAPSHOT_FILE = path.join(DATA_DIR, 'rank_snapshot.json');
+const PUSH_AUDIT_FILE = path.join(DATA_DIR, 'push_audit.log');
 
 function loadSnapshot() {
   try {
@@ -19,6 +20,11 @@ function loadSnapshot() {
 function saveSnapshot(obj) {
   fs.mkdirSync(DATA_DIR, { recursive: true });
   fs.writeFileSync(SNAPSHOT_FILE, JSON.stringify(obj, null, 2));
+}
+
+function appendPushAudit(entry) {
+  fs.mkdirSync(DATA_DIR, { recursive: true });
+  fs.appendFileSync(PUSH_AUDIT_FILE, `${JSON.stringify(entry)}\n`);
 }
 
 let lastPushAt = 0;
@@ -55,9 +61,8 @@ async function loopRankPush() {
     const rankText = prevRank
       ? (prevRank === row.rank ? `(維持 #${row.rank})` : (row.rank < prevRank ? `(↑ 由 #${prevRank})` : `(↓ 由 #${prevRank})`))
       : '(新進榜)';
-    const oi = Number(row.t.oiChangePct ?? 0);
     const chasingRisk = row.t.change > 3 ? ' ⚠️ 追價風險' : '';
-    lines.push(`${idx + 1}. ${sym}  ${Number(row.t.price || 0).toFixed(6)}  ${(row.t.change >= 0 ? '+' : '')}${Number(row.t.change || 0).toFixed(2)}%  #${row.rank} ${rankText} | OI ${(oi >= 0 ? '+' : '')}${oi.toFixed(2)}%${chasingRisk}`);
+    lines.push(`${idx + 1}. ${sym}  ${Number(row.t.price || 0).toFixed(6)}  ${(row.t.change >= 0 ? '+' : '')}${Number(row.t.change || 0).toFixed(2)}%  #${row.rank} ${rankText}${chasingRisk}`);
     nextSnapshot[sym] = { rank: row.rank, ts: now };
   });
 
@@ -78,8 +83,27 @@ async function loopRankPush() {
     `- 穩定度最佳：${stableLeader.t.base}（R² = ${stableLeader.climb.r2.toFixed(2)}）\n` +
     `- 動能最強：${momentumLeader.t.base}（+${momentumLeader.climb.slopePct.toFixed(3)}% / bar）`;
 
-  await sendTelegramMessage(msg);
-  await sendDiscordMessage(msg);
+  const eventBase = {
+    at: new Date(now).toISOString(),
+    type: 'rank_push',
+    climbers: climbers.length
+  };
+
+  try {
+    await sendTelegramMessage(msg);
+    appendPushAudit({ ...eventBase, channel: 'telegram', ok: true });
+  } catch (e) {
+    appendPushAudit({ ...eventBase, channel: 'telegram', ok: false, error: String(e?.message || e) });
+    console.error('[RANK] telegram push error:', e.message);
+  }
+
+  try {
+    await sendDiscordMessage(msg);
+    appendPushAudit({ ...eventBase, channel: 'discord', ok: true });
+  } catch (e) {
+    appendPushAudit({ ...eventBase, channel: 'discord', ok: false, error: String(e?.message || e) });
+    console.error('[RANK] discord push error:', e.message);
+  }
 
   saveSnapshot(nextSnapshot);
   lastPushAt = now;
