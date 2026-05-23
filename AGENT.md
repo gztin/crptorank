@@ -37,7 +37,7 @@ npm run start
 - `detectSteadyClimb(candles)` computes slope, slope%, R2, and higher-low count.
 - A symbol is considered steady climb when:
   - `slope > 0`
-  - `r2 > 0.6`
+  - `r2 > 0.45`
   - `higherLows >= 2`
 
 4. Notification output (`src/notifier.js`)

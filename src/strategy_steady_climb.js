@@ -41,6 +41,6 @@ export function detectSteadyClimb(candles) {
   result.slopePct = slopePct;
   result.r2 = r2;
   result.higherLows = higherLowCount;
-  result.steady = slope > 0 && r2 > 0.6 && higherLowCount >= 2;
+  result.steady = slope > 0 && r2 > 0.45 && higherLowCount >= 2;
   return result;
 }
