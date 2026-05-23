@@ -56,6 +56,11 @@ function classifyPotentialByVolume(changePct) {
   return '潛力種子 (等待驗證)';
 }
 
+function getSignalCount(snapshot, row) {
+  const sym = row?.t?.base;
+  return Number(snapshot?.[sym]?.signalCount || 1);
+}
+
 let lastPushAt = 0;
 
 async function loopRankPush() {
@@ -92,18 +97,24 @@ async function loopRankPush() {
   climbers.slice(0, 10).forEach((row, idx) => {
     const sym = row.t.base;
     const prevRank = Number(prevSnapshot[sym]?.rank || 0);
+    const prevPushPrice = Number(prevSnapshot[sym]?.price || 0);
     const prevSignalCount = Number(prevSnapshot[sym]?.signalCount || 0);
     const rankMove = prevRank ? (prevRank - row.rank) : 0;
     const rankMoveText = prevRank
       ? (rankMove === 0 ? '不變' : (rankMove > 0 ? `上升 ${rankMove}` : `下降 ${Math.abs(rankMove)}`))
       : '不變';
+    const price = Number(row.t.price || 0);
+    const priceChangeFromPrevPush = prevPushPrice > 0
+      ? ((price - prevPushPrice) / prevPushPrice) * 100
+      : 0;
 
     lines.push(
-      `${idx + 1}. ${sym}  5m${formatSignedPct(row.t.change5m)}  #${row.rank}（${rankMoveText}）`
+      `${idx + 1}. ${sym}  距上次價格${formatSignedPct(priceChangeFromPrevPush)}  #${row.rank}（${rankMoveText}）`
     );
 
     nextSnapshot[sym] = {
       rank: row.rank,
+      price,
       change: Number(row.t.change || 0),
       signalCount: prevSignalCount + 1,
       ts: now
@@ -143,8 +154,8 @@ async function loopRankPush() {
     + `${lines.join('\n')}\n\n`
     + `${potentialSections.length ? `🔥 **具備潛力標的（15m 量能變化 > 2%）**\n\n${potentialSections.join('\n\n')}\n\n` : ''}`
     + `🏆 **領先標的**\n`
-    + `- 穩定度最佳：${stableLeader.t.base}（R² = ${stableLeader.climb.r2.toFixed(2)}）\n`
-    + `- 動能最強：${momentumLeader.t.base}（+${momentumLeader.climb.slopePct.toFixed(3)}% / bar）`;
+    + `- 穩定度最佳：${stableLeader.t.base}（R² = ${stableLeader.climb.r2.toFixed(2)}，信號次數 ${getSignalCount(nextSnapshot, stableLeader)}）\n`
+    + `- 動能最強：${momentumLeader.t.base}（+${momentumLeader.climb.slopePct.toFixed(3)}% / bar，信號次數 ${getSignalCount(nextSnapshot, momentumLeader)}）`;
 
   const eventBase = {
     at: new Date(now).toISOString(),
