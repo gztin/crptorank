@@ -63,16 +63,16 @@ npm run start
 - OI information is removed from push lines.
 
 3. Potential candidates section
-- Header: `🔥 **具備潛力標的（15m 量能變化 > 5%）**`
+- Header: `🔥 **具備潛力標的（15m 量能變化 > 2%）**`
 - Grouped display format:
   - `蓄勢待發：` then list symbols
-  - `正在噴發：` then list symbols
+  - `準備噴發：` then list symbols
   - each line: `{listIndex}. {SYMBOL}  量能 {+/-VOLUME_CHANGE%}  信號次數 {SIGNAL_COUNT}`
 - `SIGNAL_COUNT` is accumulated per symbol from snapshot history.
 - Stage thresholds:
-  - `潛力種子（等待驗證）`: `+5% ~ +14%`
-  - `蓄勢待發（可以入場）`: `+15% ~ +39%`
-  - `正在噴發（預測正確）`: `>= +40%`
+  - `潛力種子（等待驗證）`: `+2% ~ +7%`
+  - `蓄勢待發（可以入場）`: `+8% ~ +19%`
+  - `準備噴發（可重點關注）`: `>= +20%`
 
 4. Leaders only
 - Stability leader (highest R²)

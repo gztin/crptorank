@@ -51,8 +51,8 @@ function calcVolumeChangePct(candles) {
 }
 
 function classifyPotentialByVolume(changePct) {
-  if (changePct >= 40) return '正在噴發 (預測正確)';
-  if (changePct >= 15) return '蓄勢待發 (可以入場)';
+  if (changePct >= 20) return '準備噴發 (可重點關注)';
+  if (changePct >= 8) return '蓄勢待發 (可以入場)';
   return '潛力種子 (等待驗證)';
 }
 
@@ -111,7 +111,7 @@ async function loopRankPush() {
   });
 
   const potentialRows = climbers
-    .filter(row => Number(row.volumeChangePct || 0) > 5)
+    .filter(row => Number(row.volumeChangePct || 0) > 2)
     .sort((a, b) => Number(b.volumeChangePct || 0) - Number(a.volumeChangePct || 0))
     .slice(0, 10)
     .map((row) => {
@@ -122,7 +122,7 @@ async function loopRankPush() {
     });
 
   const buildupRows = potentialRows.filter(r => r.stage === '蓄勢待發 (可以入場)');
-  const eruptingRows = potentialRows.filter(r => r.stage === '正在噴發 (預測正確)');
+  const eruptingRows = potentialRows.filter(r => r.stage === '準備噴發 (可重點關注)');
   const potentialSections = [];
   if (buildupRows.length) {
     potentialSections.push(
@@ -131,7 +131,7 @@ async function loopRankPush() {
   }
   if (eruptingRows.length) {
     potentialSections.push(
-      `正在噴發：\n${eruptingRows.map((r, i) => `${i + 1}. ${r.sym}  量能 ${formatSignedPct(r.volumeChangePct)}  信號次數 ${r.signalCount}`).join('\n')}`
+      `準備噴發：\n${eruptingRows.map((r, i) => `${i + 1}. ${r.sym}  量能 ${formatSignedPct(r.volumeChangePct)}  信號次數 ${r.signalCount}`).join('\n')}`
     );
   }
 
@@ -141,7 +141,7 @@ async function loopRankPush() {
   const msg = `📊 **穩定爬升清單（共 ${climbers.length} 檔）**\n`
     + `————————————\n`
     + `${lines.join('\n')}\n\n`
-    + `${potentialSections.length ? `🔥 **具備潛力標的（15m 量能變化 > 5%）**\n\n${potentialSections.join('\n\n')}\n\n` : ''}`
+    + `${potentialSections.length ? `🔥 **具備潛力標的（15m 量能變化 > 2%）**\n\n${potentialSections.join('\n\n')}\n\n` : ''}`
     + `🏆 **領先標的**\n`
     + `- 穩定度最佳：${stableLeader.t.base}（R² = ${stableLeader.climb.r2.toFixed(2)}）\n`
     + `- 動能最強：${momentumLeader.t.base}（+${momentumLeader.climb.slopePct.toFixed(3)}% / bar）`;
