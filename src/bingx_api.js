@@ -10,7 +10,11 @@ export async function fetchBingxTickers() {
   const data = await jget(`${BINGX_API}/openApi/swap/v2/quote/ticker`);
   const rows = Array.isArray(data?.data) ? data.data : [];
   return rows
-    .filter(r => String(r.symbol || '').endsWith('-USDT'))
+    // Scan universe is strictly U-margined (USDT) perpetual contracts.
+    .filter(r => {
+      const symbol = String(r.symbol || '').toUpperCase();
+      return symbol.endsWith('-USDT');
+    })
     .map(r => ({
       symbol: r.symbol,
       base: String(r.symbol).replace('-USDT', ''),

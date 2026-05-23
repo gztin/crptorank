@@ -1,4 +1,4 @@
-import fs from 'fs';
+﻿import fs from 'fs';
 import path from 'path';
 import { fetchBingxTickers, fetchKlines } from './bingx_api.js';
 import { detectSteadyClimb } from './strategy_steady_climb.js';
@@ -25,6 +25,11 @@ function saveSnapshot(obj) {
 function appendPushAudit(entry) {
   fs.mkdirSync(DATA_DIR, { recursive: true });
   fs.appendFileSync(PUSH_AUDIT_FILE, `${JSON.stringify(entry)}\n`);
+}
+
+function formatSignedPct(v, digits = 2) {
+  const n = Number(v || 0);
+  return `${n >= 0 ? '+' : ''}${n.toFixed(digits)}%`;
 }
 
 let lastPushAt = 0;
@@ -68,15 +73,24 @@ async function loopRankPush() {
   const prevSnapshot = loadSnapshot();
   const nextSnapshot = {};
   const lines = [];
+
   climbers.slice(0, 10).forEach((row, idx) => {
     const sym = row.t.base;
     const prevRank = Number(prevSnapshot[sym]?.rank || 0);
-    const rankMoveText = prevRank
-      ? (prevRank === row.rank ? '0' : (prevRank - row.rank > 0 ? `+${prevRank - row.rank}` : `${prevRank - row.rank}`))
-      : 'NEW';
-    const chasingRisk = row.t.change > 3 ? ' ⚠️ 追價風險' : '';
-    lines.push(`${idx + 1}. ${sym}  ${Number(row.t.price || 0).toFixed(6)}  ${(row.t.change >= 0 ? '+' : '')}${Number(row.t.change || 0).toFixed(2)}% | BingX名次 #${row.rank} | 名次變化 ${rankMoveText}${chasingRisk}`);
-    nextSnapshot[sym] = { rank: row.rank, ts: now };
+    const prevPushChange = Number(prevSnapshot[sym]?.change || 0);
+    const rankMove = prevRank ? (prevRank - row.rank) : 0;
+    const rankMoveText = prevRank ? (rankMove === 0 ? '0' : (rankMove > 0 ? `+${rankMove}` : `${rankMove}`)) : 'NEW';
+    const deltaFromPrevPush = Number(row.t.change || 0) - prevPushChange;
+
+    lines.push(
+      `${idx + 1}. ${sym}  ${Number(row.t.price || 0).toFixed(6)}  ${formatSignedPct(deltaFromPrevPush)} | U本位名次 #${row.rank} (${rankMoveText})`
+    );
+
+    nextSnapshot[sym] = {
+      rank: row.rank,
+      change: Number(row.t.change || 0),
+      ts: now
+    };
   });
 
   const avgR2 = climbers.reduce((s, r) => s + r.climb.r2, 0) / climbers.length;
@@ -85,16 +99,16 @@ async function loopRankPush() {
   const stableLeader = [...climbers].sort((a, b) => b.climb.r2 - a.climb.r2)[0];
   const momentumLeader = [...climbers].sort((a, b) => b.climb.slopePct - a.climb.slopePct)[0];
 
-  const msg = `📊 **穩定爬升清單（共 ${climbers.length} 檔）**\n` +
-    `━━━━━━━━━━━━━━\n` +
-    `${lines.join('\n')}\n\n` +
-    `📈 **統計**\n` +
-    `- 平均 R²：${avgR2.toFixed(2)}\n` +
-    `- 平均斜率：${avgSlope.toFixed(3)}% / bar\n` +
-    `- 平均抬高低點數：${avgHigherLows.toFixed(1)}\n\n` +
-    `🏆 **領先標的**\n` +
-    `- 穩定度最佳：${stableLeader.t.base}（R² = ${stableLeader.climb.r2.toFixed(2)}）\n` +
-    `- 動能最強：${momentumLeader.t.base}（+${momentumLeader.climb.slopePct.toFixed(3)}% / bar）`;
+  const msg = `📊 **穩定爬升清單（共 ${climbers.length} 檔）**\n`
+    + `————————————\n`
+    + `${lines.join('\n')}\n\n`
+    + `📈 **統計**\n`
+    + `- 平均 R²：${avgR2.toFixed(2)}\n`
+    + `- 平均斜率：${avgSlope.toFixed(3)}% / bar\n`
+    + `- 平均抬高低點數：${avgHigherLows.toFixed(1)}\n\n`
+    + `🏆 **領先標的**\n`
+    + `- 穩定度最佳：${stableLeader.t.base}（R² = ${stableLeader.climb.r2.toFixed(2)}）\n`
+    + `- 動能最強：${momentumLeader.t.base}（+${momentumLeader.climb.slopePct.toFixed(3)}% / bar）`;
 
   const eventBase = {
     at: new Date(now).toISOString(),
