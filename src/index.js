@@ -51,8 +51,8 @@ function calcVolumeChangePct(candles) {
 }
 
 function classifyPotentialByVolume(changePct) {
-  if (changePct >= 120) return '正在噴發 (預測正確)';
-  if (changePct >= 40) return '蓄勢待發 (可以入場)';
+  if (changePct >= 40) return '正在噴發 (預測正確)';
+  if (changePct >= 15) return '蓄勢待發 (可以入場)';
   return '潛力種子 (等待驗證)';
 }
 
@@ -111,7 +111,7 @@ async function loopRankPush() {
   });
 
   const potentialRows = climbers
-    .filter(row => Number(row.volumeChangePct || 0) > 10)
+    .filter(row => Number(row.volumeChangePct || 0) > 5)
     .sort((a, b) => Number(b.volumeChangePct || 0) - Number(a.volumeChangePct || 0))
     .slice(0, 10)
     .map((row) => {
@@ -135,20 +135,13 @@ async function loopRankPush() {
     );
   }
 
-  const avgR2 = climbers.reduce((s, r) => s + r.climb.r2, 0) / climbers.length;
-  const avgSlope = climbers.reduce((s, r) => s + r.climb.slopePct, 0) / climbers.length;
-  const avgHigherLows = climbers.reduce((s, r) => s + r.climb.higherLows, 0) / climbers.length;
   const stableLeader = [...climbers].sort((a, b) => b.climb.r2 - a.climb.r2)[0];
   const momentumLeader = [...climbers].sort((a, b) => b.climb.slopePct - a.climb.slopePct)[0];
 
   const msg = `📊 **穩定爬升清單（共 ${climbers.length} 檔）**\n`
     + `————————————\n`
     + `${lines.join('\n')}\n\n`
-    + `${potentialSections.length ? `🔥 **具備潛力標的（15m 量能變化 > 10%）**\n\n${potentialSections.join('\n\n')}\n\n` : ''}`
-    + `📈 **統計**\n`
-    + `- 平均 R²：${avgR2.toFixed(2)}\n`
-    + `- 平均斜率：${avgSlope.toFixed(3)}% / bar\n`
-    + `- 平均抬高低點數：${avgHigherLows.toFixed(1)}\n\n`
+    + `${potentialSections.length ? `🔥 **具備潛力標的（15m 量能變化 > 5%）**\n\n${potentialSections.join('\n\n')}\n\n` : ''}`
     + `🏆 **領先標的**\n`
     + `- 穩定度最佳：${stableLeader.t.base}（R² = ${stableLeader.climb.r2.toFixed(2)}）\n`
     + `- 動能最強：${momentumLeader.t.base}（+${momentumLeader.climb.slopePct.toFixed(3)}% / bar）`;
