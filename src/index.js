@@ -44,7 +44,8 @@ async function loopRankPush() {
 
   const topN = Number(process.env.RANK_PUSH_TOP_N || 30);
   const tickers = await fetchBingxTickers();
-  const sortedTickers = tickers.sort((a, b) => (b.volVelocity || 0) - (a.volVelocity || 0));
+  // Align ranking with BingX U-margined contracts list by 24h change%.
+  const sortedTickers = tickers.sort((a, b) => (b.change || 0) - (a.change || 0));
   const rankByBase = new Map(sortedTickers.map((t, idx) => [t.base, idx + 1]));
 
   const scanTargets = sortedTickers.slice(0, topN);
